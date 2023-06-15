@@ -1,7 +1,12 @@
 package View;
 
+import Events.CrashEvent;
+import Events.EatEvent;
 import Events.KeyboardEvent;
+import Events.TickEvent;
+import Interfaces.GameEventListener;
 import Interfaces.KeyboardListener;
+import Interfaces.Provider;
 import Interfaces.ViewUpdateListener;
 import Model.Board;
 import Model.Position;
@@ -14,23 +19,20 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 
-public class BoardView extends JFrame implements ViewUpdateListener<Board> {
+public class BoardView extends JFrame implements GameEventListener {
     private JTable table;
-    private JPanel panel;
-    private int score;
-
+    private Provider provider;
     private ArrayList<KeyboardListener> keyboardListeners;
+    private ArrayList<GameEventListener> gameEventListeners;
 
     public BoardView() {
         super("SNAKE");
-
         this.keyboardListeners = new ArrayList<>();
-        this.setSize(1080,1920);
-        this.setLayout(new BorderLayout());
+        this.gameEventListeners = new ArrayList<>();
+    }
 
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setVisible(true);
-
+    private void init(){
+        Board board = provider.getBoard();
         DefaultTableModel model = new DefaultTableModel(25, 16) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -39,22 +41,18 @@ public class BoardView extends JFrame implements ViewUpdateListener<Board> {
         };
         this.table = new JTable(model);
 
-
         for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setMaxWidth(20); // Max cell width
-            table.getColumnModel().getColumn(i).setMinWidth(20); // Min cell width
-            table.getColumnModel().getColumn(i).setPreferredWidth(20); // Preferred cell width
+            table.getColumnModel().getColumn(i).setMaxWidth(20);
+            table.getColumnModel().getColumn(i).setMinWidth(20);
+            table.getColumnModel().getColumn(i).setPreferredWidth(20);
         }
 
-        this.panel = new JPanel() {
-            @Override
-            public void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.drawString("Score: " + score, 10, 20);
+        for (int i = 0; i < table.getColumnCount(); i++){
+            for(int j = 0; j < table.getRowCount(); j++){
+                table.setValueAt(board.getBoard()[j][i], j, i);
             }
-        };
+        }
 
-        // Set table cell render
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer(){
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -74,36 +72,35 @@ public class BoardView extends JFrame implements ViewUpdateListener<Board> {
             }
         });
 
-        // Disabling cell grid
-        table.setShowGrid(false);
+        table.setShowGrid(true);
         // Disable cell selection
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(false);
         table.setFocusable(false);
-        // Remove cell margins
         table.setIntercellSpacing(new Dimension(0, 0));
         table.setBackground(Color.BLACK);
 
         this.setFocusable(true);
+        this.setLayout(new BorderLayout());
+        this.add(table, BorderLayout.CENTER);
+        this.setSize(1080,1920);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setVisible(true);
 
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_UP:
-                        System.out.println("fire up");
                         fireEvent(KeyboardEvent.UP);
                         break;
                     case KeyEvent.VK_DOWN:
-                        System.out.println("fire down");
                         fireEvent(KeyboardEvent.DOWN);
                         break;
                     case KeyEvent.VK_LEFT:
-                        System.out.println("fire left");
                         fireEvent(KeyboardEvent.LEFT);
                         break;
                     case KeyEvent.VK_RIGHT:
-                        System.out.println("fire right");
                         fireEvent(KeyboardEvent.RIGHT);
                         break;
                 }
@@ -111,22 +108,32 @@ public class BoardView extends JFrame implements ViewUpdateListener<Board> {
         });
     }
 
+    public void setProvider(Provider provider){
+        this.provider = provider;
+        init();
+    }
 
     @Override
-    public void updateView(Board item) {
+    public void onTick(TickEvent event) {
+        System.out.println("Update view in view");
         DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
-
-        for(int i = 0; i < 25; i++){
-            for(int j = 0; j < 16; j++){
-                tableModel.setValueAt(item.getBoardParcel(new Position(j, i)),i, j);
-            }
+        for (Position pos : event.getUpdatedPositions()) {
+            tableModel.setValueAt(event.getBoard().getBoardParcel(pos), pos.getY(), pos.getX());
         }
-        add(panel);
-        add(table);
         revalidate();
         repaint();
+    }
+
+    @Override
+    public void onEat(EatEvent event) {
 
     }
+
+    @Override
+    public void onCrash(CrashEvent event) {
+
+    }
+
 
     private void fireEvent(int direction) {
         KeyboardEvent event = new KeyboardEvent(this, direction);
@@ -139,15 +146,6 @@ public class BoardView extends JFrame implements ViewUpdateListener<Board> {
         keyboardListeners.add(listener);
     }
 
-    // Method to remove keyboard listeners
-    public void removeKeyboardListener(KeyboardListener listener) {
-        keyboardListeners.remove(listener);
-    }
-    public JTable getTable() {
-        return table;
-    }
 
-    public JPanel getPanel() {
-        return panel;
-    }
+
 }

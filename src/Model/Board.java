@@ -9,16 +9,16 @@ public class Board {
     public static final int STATE_EMPTY = 0;
     public static final int STATE_FOOD = 1;
     public static final int STATE_SNAKE = 2;
+    private ArrayList<Position> updatedPositions;
 
     private int boardWidth;
     private int boardHeight;
-    private ArrayList<ViewUpdateListener<Board>> viewUpdateListeners;
 
     public Board(){
         this.boardWidth = 16;
         this.boardHeight = 25;
         this.board = new int[boardHeight][boardWidth];
-        viewUpdateListeners = new ArrayList<>();
+        updatedPositions = new ArrayList<>();
     }
 
     public void washBoard(){
@@ -29,13 +29,10 @@ public class Board {
         }
     }
 
-    public void addViewUpdateListener(ViewUpdateListener<Board> listener) {
-        viewUpdateListeners.add(listener);
-    }
 
     public void setBoardParcel(Position position, int state){
         board[position.getY()][position.getX()] = state;
-        fireViewUpdate();
+        updatedPositions.add(position);
     }
 
     public int getBoardParcel(Position position){
@@ -54,9 +51,8 @@ public class Board {
         return boardHeight;
     }
 
-    private void fireViewUpdate(){
-        for(ViewUpdateListener<Board> listener : viewUpdateListeners){
-            listener.updateView(this);
-        }
+    public ArrayList<Position> getUpdatedPositions(){
+        return updatedPositions;
     }
+
 }

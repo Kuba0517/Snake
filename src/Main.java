@@ -15,7 +15,8 @@ public class Main {
         Snake snake = new Snake(13,24);
         GameController gc = new GameController(board,snake);
         BoardView bv = new BoardView();
-        gc.setView(bv);
+        gc.addGameEventListener(bv);
         bv.addKeyboardListener(gc);
+        bv.setProvider(gc);
     }
 }

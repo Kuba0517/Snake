@@ -11,8 +11,9 @@ public class Snake {
     private int direction;
     public static final int UP = 0;
     public static final int DOWN = 1;
-    public static final int RIGHT = 2;
-    public static final int LEFT = 3;
+    public static final int LEFT = 2;
+    public static final int RIGHT = 3;
+
 
     public Snake(int initialX, int initialY) {
         body = new LinkedList<>();
@@ -34,25 +35,25 @@ public class Snake {
         return body.getFirst();
     }
 
-    public void addSegment() {
+    public Segment getTail(){return body.getLast();}
+
+    public void addSegment(Position pos) {
         Segment seg = new Segment();
-        seg.setPosition(new Position(body.getLast().getPosition().getX(), body.getLast().getPosition().getY()));
+        seg.setPosition(pos);
         body.addLast(seg);
     }
 
 
     public void move(Position newPosition) {
-        // Save old head position
         Position oldHeadPosition = new Position(getHead().getPosition().getX(), getHead().getPosition().getY());
 
-        // Move the head
         Segment newHead = new Segment();
         newHead.setPosition(newPosition);
         System.out.println("Moving head to the new position " + newPosition.getX() + " y: " + newPosition.getY());
         body.addFirst(newHead);
         body.removeLast();
 
-        // Move the tail to the old head position if the body size is more than 1
+
         if (body.size() > 1) {
             body.removeLast();
             Segment newTail = new Segment();
@@ -66,9 +67,6 @@ public class Snake {
         return body;
     }
 
-    public boolean checkCollision(Segment segment) {
-        return body.contains(segment);
-    }
 
 }
 

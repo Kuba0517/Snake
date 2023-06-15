@@ -1,7 +1,12 @@
 package Controller;
 
+import Events.CrashEvent;
+import Events.EatEvent;
 import Events.KeyboardEvent;
+import Events.TickEvent;
+import Interfaces.GameEventListener;
 import Interfaces.KeyboardListener;
+import Interfaces.Provider;
 import Interfaces.ViewUpdateListener;
 import Model.Board;
 import Model.Position;
@@ -9,11 +14,12 @@ import Model.Segment;
 import Model.Snake;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
 
 import static Model.Board.*;
 
-public class GameController implements KeyboardListener, ViewUpdateListener<Board> {
+public class GameController implements KeyboardListener, Provider {
     private Board board;
     private boolean gameRunning;
     private Thread gameThread;
@@ -21,6 +27,8 @@ public class GameController implements KeyboardListener, ViewUpdateListener<Boar
     private Point food;
     private Random random;
     private ViewUpdateListener<Board> view;
+    private ArrayList<GameEventListener> listeners = new ArrayList<>();
+
 
     public GameController(Board board, Snake snake) {
         this.board = board;
@@ -28,13 +36,6 @@ public class GameController implements KeyboardListener, ViewUpdateListener<Boar
         this.snake = snake;
         this.random = new Random();
         initializeGame();
-        moveSnake(Snake.RIGHT);
-        moveSnake(Snake.RIGHT);
-        moveSnake(Snake.DOWN);
-        moveSnake(Snake.DOWN);
-        moveSnake(Snake.DOWN);
-        moveSnake(Snake.DOWN);
-        moveSnake(Snake.DOWN);
         startGame();
     }
 
@@ -45,16 +46,11 @@ public class GameController implements KeyboardListener, ViewUpdateListener<Boar
         generateFood();
     }
 
-    public void setView(ViewUpdateListener<Board> view) {
-        this.view = view;
-        board.addViewUpdateListener(view);
-    }
 
     public void startGame() {
         this.gameRunning = true;
         this.gameThread = new Thread(this::gameLoop);
         this.gameThread.start();
-        System.out.println("Started");
     }
 
     public void stopGame() {
@@ -76,43 +72,58 @@ public class GameController implements KeyboardListener, ViewUpdateListener<Boar
             case Snake.RIGHT -> headPos.setX(headPos.getX() + 1);
         }
 
-        // Sprawdzenie, czy nowa pozycja jest poza granicami planszy
-        if (headPos.getX() < 0 || headPos.getX() >= board.getBoardWidth() ||
-                headPos.getY() < 0 || headPos.getY() >= board.getBoardHeight()) {
-            System.out.println("If out of board");
-            //stopGame();
-            return; // Game over
-        }
-
-        if (board.getBoardParcel(headPos) == Board.STATE_SNAKE) {
-            stopGame();
-            System.out.println("If snakebod");
-            return; // Game over
+        Position tailPos = null;
+        if (snake.getSegments().size() > 1) {
+            tailPos = snake.getTail().getPosition();
         }
 
         if (board.getBoardParcel(headPos) == Board.STATE_FOOD) {
-            System.out.println("If food");
-            snake.addSegment();
+            snake.move(headPos);
+            snake.addSegment(headPos);
+            board.setBoardParcel(headPos, STATE_EMPTY);
             generateFood();
+            EatEvent eatEvent = new EatEvent(this);
+                for (GameEventListener listener : listeners) {
+                    listener.onEat(eatEvent);
+                }
         } else {
-            System.out.println("Else food");
-            // Jeżeli wąż nie zjadł jedzenia, usuwamy ostatni segment
             Position tail = snake.getSegments().getLast().getPosition();
             snake.move(headPos);
-            board.setBoardParcel(tail, Board.STATE_EMPTY);
+            board.setBoardParcel(tail, STATE_EMPTY);
+            board.setBoardParcel(headPos, STATE_SNAKE);
         }
     }
 
 
+
     private void gameLoop() {
         while (gameRunning) {
+            TickEvent tickEvent = new TickEvent(this, board, board.getUpdatedPositions());
+            for (GameEventListener listener : listeners) {
+                listener.onTick(tickEvent);
+            }
             moveSnake(snake.getDirection());
+//            }
+//            if (snake.getHead().getPosition().getX() < 0 || snake.getHead().getPosition().getX() >= board.getBoardWidth() ||
+//                    snake.getHead().getPosition().getY() < 0 || snake.getHead().getPosition().getY() >= board.getBoardHeight() ||
+//                    board.getBoardParcel(snake.getHead().getPosition()) == Board.STATE_SNAKE) {
+//                CrashEvent crashEvent = new CrashEvent(this);
+//                for (GameEventListener listener : listeners) {
+//                    listener.onCrash(crashEvent);
+//                }
+//                stopGame();
+//                return;
+//            }
             try {
-                Thread.sleep(200);  // Czekamy, zanim wykonamy kolejny ruch – to wartość możemy dostosować do prędkości gry
+                Thread.sleep(120);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void addGameEventListener(GameEventListener listener) {
+        this.listeners.add(listener);
     }
 
     private void generateFood() {
@@ -121,24 +132,23 @@ public class GameController implements KeyboardListener, ViewUpdateListener<Boar
             x = random.nextInt(board.getBoardWidth());
             y = random.nextInt(board.getBoardHeight());
         } while (board.getBoard()[y][x] != STATE_EMPTY);
-        board.getBoard()[y][x] = STATE_FOOD;
-        food = new Point(x, y);
+        board.setBoardParcel(new Position(x, y), STATE_FOOD);
     }
 
     @Override
     public void directionChanged(KeyboardEvent event) {
-        System.out.println("Direction changed to: " + event.getDirection());
-        if (Math.abs(snake.getDirection() - event.getDirection()) != 2) {
+        if(!((event.getDirection() == Snake.UP && snake.getDirection() == Snake.DOWN) || (event.getDirection() == Snake.DOWN && snake.getDirection() == Snake.UP))){
             snake.setDirection(event.getDirection());
         }
     }
 
-    @Override
-    public void updateView(Board item) {
-        if(view != null){
-            view.updateView(item);
-            System.out.println("Aktualizacja widoku");
-        }
-    }
-}
 
+    @Override
+    public Board getBoard() {
+        return board;
+    }
+
+
+
+
+}
