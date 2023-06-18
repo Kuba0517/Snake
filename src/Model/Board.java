@@ -3,13 +3,18 @@ package Model;
 import Interfaces.ViewUpdateListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Board {
     private int[][] board;
     public static final int STATE_EMPTY = 0;
     public static final int STATE_FOOD = 1;
     public static final int STATE_SNAKE = 2;
+    public static final int STATE_HEAD = 3;
+    private int score;
     private ArrayList<Position> updatedPositions;
+    private ArrayList<Player> scores;
 
     private int boardWidth;
     private int boardHeight;
@@ -18,17 +23,18 @@ public class Board {
         this.boardWidth = 16;
         this.boardHeight = 25;
         this.board = new int[boardHeight][boardWidth];
-        updatedPositions = new ArrayList<>();
+        this.score = 0;
+        this.scores = new ArrayList<>();
+        this.updatedPositions = new ArrayList<>();
     }
 
-    public void washBoard(){
-        for(int i = 0; i < board.length; i++){
-            for(int j = 0; j < board[i].length; j++){
-                board[i][j] = STATE_EMPTY;
-            }
-        }
+    public ArrayList<Player> getScores(){
+        return scores;
     }
 
+    public void setScores(ArrayList<Player> scores){
+        this.scores = scores;
+    }
 
     public void setBoardParcel(Position position, int state){
         board[position.getY()][position.getX()] = state;
@@ -53,6 +59,12 @@ public class Board {
 
     public ArrayList<Position> getUpdatedPositions(){
         return updatedPositions;
+    }
+
+    public int getScore(){ return score;}
+
+    public void incrementScore(){
+        score++;
     }
 
 }

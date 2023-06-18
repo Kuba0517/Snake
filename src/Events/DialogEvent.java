@@ -1,9 +1,8 @@
 package Events;
 
-public class EatEvent extends GameEvent {
+public class DialogEvent extends GameEvent{
     private int score;
-
-    public EatEvent(Object source, int score){
+    public DialogEvent(Object source, int score){
         super(source);
         this.score = score;
     }
@@ -12,4 +11,3 @@ public class EatEvent extends GameEvent {
         return score;
     }
 }
-

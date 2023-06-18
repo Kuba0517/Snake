@@ -44,28 +44,19 @@ public class Snake {
     }
 
 
-    public void move(Position newPosition) {
-        Position oldHeadPosition = new Position(getHead().getPosition().getX(), getHead().getPosition().getY());
-
+    public void move(Position newPosition, boolean isEating) {
         Segment newHead = new Segment();
         newHead.setPosition(newPosition);
-        System.out.println("Moving head to the new position " + newPosition.getX() + " y: " + newPosition.getY());
         body.addFirst(newHead);
-        body.removeLast();
-
-
-        if (body.size() > 1) {
+        if (!isEating) {
             body.removeLast();
-            Segment newTail = new Segment();
-            newTail.setPosition(oldHeadPosition);
-            body.addLast(newTail);
         }
     }
 
 
     public LinkedList<Segment> getSegments() {
         return body;
-    }
+    } // zebym mogl korzystac z addFirst, addLast itp
 
 
 }

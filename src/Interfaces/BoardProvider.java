@@ -2,6 +2,6 @@ package Interfaces;
 
 import Model.Board;
 
-public interface Provider {
+public interface BoardProvider {
     Board getBoard();
 }

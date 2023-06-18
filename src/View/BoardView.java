@@ -1,17 +1,14 @@
 package View;
 
 import Events.CrashEvent;
-import Events.EatEvent;
 import Events.KeyboardEvent;
 import Events.TickEvent;
-import Interfaces.GameEventListener;
-import Interfaces.KeyboardListener;
-import Interfaces.Provider;
-import Interfaces.ViewUpdateListener;
+import Interfaces.*;
 import Model.Board;
 import Model.Position;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -19,20 +16,25 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 
-public class BoardView extends JFrame implements GameEventListener {
+public class BoardView extends JFrame implements TickEventListener, CrashEventListener, GameResetListener {
     private JTable table;
-    private Provider provider;
+    private JPanel score;
+    private BoardProvider boardProvider;
+    private GameOverView gameOverView;
     private ArrayList<KeyboardListener> keyboardListeners;
-    private ArrayList<GameEventListener> gameEventListeners;
+    private ArrayList<TickEventListener> tickEventListeners;
 
-    public BoardView() {
+    public BoardView(ScorePanelView score, GameOverView gameOverView) {
         super("SNAKE");
         this.keyboardListeners = new ArrayList<>();
-        this.gameEventListeners = new ArrayList<>();
+        this.tickEventListeners = new ArrayList<>();
+        this.gameOverView = gameOverView;
+        this.score = score;
+        this.setBackground(Color.BLACK);
     }
 
     private void init(){
-        Board board = provider.getBoard();
+        Board board = boardProvider.getBoard();
         DefaultTableModel model = new DefaultTableModel(25, 16) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -53,27 +55,48 @@ public class BoardView extends JFrame implements GameEventListener {
             }
         }
 
+        Border border = BorderFactory.createLineBorder(Color.CYAN, 1);
+        table.setBorder(border);
+
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer(){
+            private int cellValue;
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                int cellValue = (int) value;
-
-                if(cellValue == 1){
-                    setBackground(Color.GREEN);
-                }else if(cellValue == 2){
-                    setBackground(Color.RED);
-                }else{
+                cellValue = (int) value;
+               if (cellValue == 0){
                     setBackground(Color.BLACK);
                 }
+
                 setForeground(getBackground());
                 setText("");
                 return this;
             }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(getBackground());
+                g.fillRect(1, 1, getWidth()-2, getHeight()-2);
+
+                if (cellValue == 3) {
+                    g.setColor(Color.BLUE);
+                    g.fillOval(1, 1, getWidth()-2, getHeight()-2);
+                }
+                else if (cellValue == 1) {
+                    g.setColor(Color.YELLOW);
+                    int xPoints[] = {0, getWidth()/2, getWidth(), getWidth()/2, 0};
+                    int yPoints[] = {getHeight()/2, 0, getHeight()/2, getHeight(), getHeight()/2};
+                    g.fillPolygon(xPoints, yPoints, 5);
+                }
+                else if (cellValue == 2){
+                    g.setColor(Color.RED);
+                    g.fillOval(1,1,getWidth()-2,getHeight()-2);
+                }
+            }
         });
 
-        table.setShowGrid(true);
-        // Disable cell selection
+
+        table.setShowGrid(false);
         table.setRowSelectionAllowed(false);
         table.setColumnSelectionAllowed(false);
         table.setFocusable(false);
@@ -82,10 +105,12 @@ public class BoardView extends JFrame implements GameEventListener {
 
         this.setFocusable(true);
         this.setLayout(new BorderLayout());
+        this.add(score, BorderLayout.NORTH);
         this.add(table, BorderLayout.CENTER);
-        this.setSize(1080,1920);
+        this.setSize(338,472);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setVisible(true);
+        this.setLocationRelativeTo(null);
 
         addKeyListener(new KeyAdapter() {
             @Override
@@ -108,31 +133,44 @@ public class BoardView extends JFrame implements GameEventListener {
         });
     }
 
-    public void setProvider(Provider provider){
-        this.provider = provider;
+    public void setProvider(BoardProvider boardProvider){
+        this.boardProvider = boardProvider;
         init();
     }
 
     @Override
-    public void onTick(TickEvent event) {
-        System.out.println("Update view in view");
-        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
-        for (Position pos : event.getUpdatedPositions()) {
-            tableModel.setValueAt(event.getBoard().getBoardParcel(pos), pos.getY(), pos.getX());
-        }
+    public void onCrash(CrashEvent event) {
+        this.remove(score);
+        this.remove(table);
+
+        gameOverView.setList(event.getScores());
+
+        this.add(gameOverView, BorderLayout.CENTER);
+
         revalidate();
         repaint();
     }
 
     @Override
-    public void onEat(EatEvent event) {
-
+    public void onReset() {
+        this.remove(gameOverView);
+        init();
+        revalidate();
+        repaint();
     }
 
     @Override
-    public void onCrash(CrashEvent event) {
-
+    public void onTick(TickEvent event) {
+            if(table != null) {
+                DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+                for (Position pos : event.getUpdatedPositions()) {
+                    tableModel.setValueAt(event.getBoard().getBoardParcel(pos), pos.getY(), pos.getX());
+                }
+                revalidate();
+                repaint();
+            }
     }
+
 
 
     private void fireEvent(int direction) {
@@ -145,7 +183,5 @@ public class BoardView extends JFrame implements GameEventListener {
     public void addKeyboardListener(KeyboardListener listener) {
         keyboardListeners.add(listener);
     }
-
-
 
 }
